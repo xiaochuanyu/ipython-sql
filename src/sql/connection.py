@@ -1,4 +1,6 @@
 import sqlalchemy
+import prettytable
+import IPython.display as dis
 
 
 class Connection(object):
@@ -32,7 +34,7 @@ class Connection(object):
             cls.current = descriptor
         elif descriptor:
             conn = cls.name_to_connections.get(descriptor) or \
-                   cls.url_to_connections.get(descriptor.lower())
+                   cls.url_to_connections.get(descriptor)
             if conn:
                 cls.current = conn
             else:
@@ -41,9 +43,10 @@ class Connection(object):
         if cls.current:
             return cls.current
         else:
-            raise Exception("Cannot run query because there is no current connection.\n{}\n{}".format(
-                cls._tell_format(),
-                cls.connections_as_str()))
+            cls.show_connections()
+            raise Exception("Cannot run query because there is no current connection.\n{}".format(
+                cls._tell_format()
+            ))
 
     @classmethod
     def close_by_descriptor(cls, descriptor):
@@ -53,19 +56,18 @@ class Connection(object):
             conn = cls.name_to_connections.get(descriptor) or \
                    cls.url_to_connections.get(descriptor.lower())
         if not conn:
-            raise Exception("Could not find connection.\n{}"
-                            .format(cls.connections_as_str()))
+            cls.show_connections()
+            raise Exception("Could not find connection.\n")
         cls.name_to_connections.pop(conn.name)
         cls.url_to_connections.pop(str(conn.metadata.bind.url))
         conn.session.close()
 
     @classmethod
-    def connections_as_str(cls):
-        result = "Current connections:\n" + \
-                 "{:<30}{:<30}\n".format("Name", "URL") + \
-                 ("\n".join(["{:<30}{:<30}".format(name, url) for name, url in
-                             zip(cls.url_to_connections.keys(), cls.name_to_connections.keys())]))
-        return result
+    def show_connections(cls):
+        table = prettytable.PrettyTable()
+        table.add_column("name", list(cls.name_to_connections.keys()))
+        table.add_column("url", list(cls.url_to_connections.keys()))
+        dis.display_html(dis.HTML(table.get_html_string()))
 
     @classmethod
     def _tell_format(cls):

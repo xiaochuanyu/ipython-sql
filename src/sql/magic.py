@@ -1,7 +1,7 @@
 import re
 
-from IPython.core.magic import Magics, magics_class, line_cell_magic, needs_local_scope
-
+from IPython.core.magic import Magics, magics_class, line_cell_magic
+from IPython.display import display_javascript
 try:
     from traitlets.config.configurable import Configurable
     from traitlets import Bool, Int, Unicode
@@ -98,10 +98,10 @@ class SqlMagic(Magics, Configurable):
             # print("Query: {}".format(query))
 
             if args.connections:
-                print(sql.connection.Connection.connections_as_str())
+                sql.connection.Connection.show_connections()
                 return None
             elif args.close:
-                print(sql.connection.Connection.close_by_descriptor(args.close))
+                sql.connection.Connection.close_by_descriptor(args.close)
                 return None
 
             connection = None
@@ -120,13 +120,14 @@ class SqlMagic(Magics, Configurable):
             if query:
                 return self._do_query(conn, query, user_ns, args)
             elif args.connect:
-                print(sql.connection.Connection.connections_as_str())
+                sql.connection.Connection.show_connections()
                 return None
 
         except Exception as e:
             # Sqlite apparently return all errors as OperationalError :/
             if self.short_errors:
                 print(e)
+                return None
             else:
                 raise
 
@@ -183,3 +184,5 @@ class SqlMagic(Magics, Configurable):
 def load_ipython_extension(ip):
     """Load the extension in IPython."""
     ip.register_magics(SqlMagic)
+    js = "IPython.CodeCell.config_defaults.highlight_modes['magic_sql'] = {'reg':[/^%%sql/]};"
+    display_javascript(js, raw=True)
