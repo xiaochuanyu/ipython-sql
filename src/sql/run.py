@@ -6,6 +6,8 @@ import re
 import sqlalchemy
 import sqlparse
 import prettytable
+from psycopg2._psycopg import QueryCanceledError
+
 from .column_guesser import ColumnGuesserMixin
 import psycopg2
 from psycopg2.extensions import POLL_OK, POLL_READ, POLL_WRITE
@@ -317,7 +319,11 @@ def run(conn, sql, config, user_ns_copy):
             if sql.strip().split()[0].lower() == 'begin':
                 raise OperationNotSupported("ipython_sql does not support transactions")
             txt = sqlalchemy.sql.text(statement).execution_options(autocommit=True)
-            result = conn.session.execute(txt, user_ns_copy)
+            try:
+                result = conn.session.execute(txt, user_ns_copy)
+            except QueryCanceledError:
+                conn.session.rollback()
+                raise
             result_set = ResultSet(result, statement, config)
             if result and config.feedback:
                 print(interpret_rowcount(result.rowcount))

@@ -153,7 +153,7 @@ class SqlMagic(Magics, Configurable):
             return None
 
         if args.store or args.store_print:
-            result_var = args.store
+            result_var = args.store or args.store_print
             print("Returning data to local variable {}".format(result_var))
             self.shell.user_ns.update({result_var: result})
             return None
